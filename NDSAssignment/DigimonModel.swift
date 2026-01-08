@@ -44,6 +44,8 @@ struct DigimonDetail: Codable {
     let fields: [Field]?
     let descriptions: [Description]?
     let skills: [Skill]?
+    let priorEvolutions: [Evolution]?
+    let nextEvolutions: [Evolution]?
 }
 
 struct DigimonImage: Codable {
@@ -83,4 +85,16 @@ struct Skill: Codable {
     let skill: String?
     let translation: String?
     let description: String?
+}
+
+struct Evolution: Codable {
+    let id: Int
+    let digimon: String
+    let condition: String?
+    let image: String
+    let url: String
+    
+    var imageURL: URL? {
+        return URL(string: image)
+    }
 }

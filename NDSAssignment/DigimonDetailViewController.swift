@@ -93,18 +93,26 @@ class DigimonDetailViewController: UIViewController {
             addBasicInfoSection(detail: detail)
         }
         
+        if let descriptions = detail.descriptions,
+           let englishDesc = descriptions.first(where: { $0.language == "en_us" })?.description,
+           !englishDesc.isEmpty {
+            addDescriptionSection(description: englishDesc)
+        }
+        
+        if let priorEvolutions = detail.priorEvolutions, !priorEvolutions.isEmpty {
+            addEvolutionSection(evolutions: priorEvolutions, title: "Prior Evolutions", emoji: "⬅️")
+        }
+        
+        if let nextEvolutions = detail.nextEvolutions, !nextEvolutions.isEmpty {
+            addEvolutionSection(evolutions: nextEvolutions, title: "Next Evolutions", emoji: "➡️")
+        }
+        
         if let fields = detail.fields, !fields.isEmpty {
             addFieldsSection(fields: fields)
         }
         
         if let skills = detail.skills, !skills.isEmpty {
             addSkillsSection(skills: skills)
-        }
-        
-        if let descriptions = detail.descriptions,
-           let englishDesc = descriptions.first(where: { $0.language == "en_us" })?.description,
-           !englishDesc.isEmpty {
-            addDescriptionSection(description: englishDesc)
         }
     }
     
@@ -176,6 +184,93 @@ class DigimonDetailViewController: UIViewController {
         ])
         
         infoStackView.addArrangedSubview(containerView)
+    }
+    
+    private func addEvolutionSection(evolutions: [Evolution], title: String, emoji: String) {
+        let containerView = createCardContainer()
+        
+        let titleLabel = createSectionTitle(text: "\(emoji) \(title)")
+        containerView.addSubview(titleLabel)
+        
+        let scrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        
+        let stackView = UIStackView()
+        stackView.axis = .horizontal
+        stackView.spacing = 12
+        stackView.alignment = .center
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        
+        scrollView.addSubview(stackView)
+        containerView.addSubview(scrollView)
+        
+        for evolution in evolutions {
+            let evolutionView = createEvolutionView(evolution: evolution)
+            stackView.addArrangedSubview(evolutionView)
+        }
+        
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            
+            scrollView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -16),
+            scrollView.heightAnchor.constraint(equalToConstant: 140),
+            
+            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            stackView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
+        ])
+        
+        infoStackView.addArrangedSubview(containerView)
+    }
+    
+    private func createEvolutionView(evolution: Evolution) -> UIView {
+        let container = UIView()
+        container.backgroundColor = .tertiarySystemGroupedBackground
+        container.layer.cornerRadius = 12
+        container.translatesAutoresizingMaskIntoConstraints = false
+        
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.backgroundColor = .white
+        imageView.layer.cornerRadius = 8
+        imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.loadImage(from: evolution.imageURL, placeholder: UIImage(systemName: "photo"))
+        
+        let nameLabel = UILabel()
+        nameLabel.text = evolution.digimon
+        nameLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        nameLabel.textColor = .label
+        nameLabel.textAlignment = .center
+        nameLabel.numberOfLines = 2
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        container.addSubview(imageView)
+        container.addSubview(nameLabel)
+        
+        NSLayoutConstraint.activate([
+            container.widthAnchor.constraint(equalToConstant: 100),
+            
+            imageView.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
+            imageView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            imageView.widthAnchor.constraint(equalToConstant: 80),
+            imageView.heightAnchor.constraint(equalToConstant: 80),
+            
+            nameLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 8),
+            nameLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 4),
+            nameLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -4),
+            nameLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8)
+        ])
+        
+        return container
     }
     
     private func addFieldsSection(fields: [Field]) {

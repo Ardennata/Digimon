@@ -19,90 +19,83 @@ class NetworkManager: NetworkManagerProtocol {
     private init() {}
     
     func fetchDigimons(page: Int = 0, pageSize: Int = 8, searchText: String? = nil, completion: @escaping (Result<DigimonResponse, Error>) -> Void) {
-        var urlString = "\(baseURL)/digimon?page=\(page)&pageSize=\(pageSize)"
         
-        if let text = searchText, !text.isEmpty {
-            let encodedText = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            
-            urlString += "&name=\(encodedText)"
+        guard let text = searchText, !text.isEmpty else {
+            fetchNormalDigimons(page: page, pageSize: pageSize, completion: completion)
+            return
         }
+        
+        searchDigimons(searchText: text, page: page, pageSize: pageSize, completion: completion)
+    }
+    
+    private func fetchNormalDigimons(page: Int, pageSize: Int, completion: @escaping (Result<DigimonResponse, Error>) -> Void) {
+        let urlString = "\(baseURL)/digimon?page=\(page)&pageSize=\(pageSize)"
         
         guard let url = URL(string: urlString) else {
             completion(.failure(NSError(domain: "Invalid URL", code: -1)))
             return
         }
         
-        performRequest(url: url) { (result: Result<DigimonResponse, Error>) in
-            switch result {
-            case .success(let response):
-                if searchText != nil && !searchText!.isEmpty {
-                    if !response.content.isEmpty {
-                        completion(.success(response))
-                        return
-                    }
-                    
-                    self.searchInOtherFields(page: page, pageSize: pageSize, searchText: searchText!, completion: completion)
-                } else {
-                    completion(.success(response))
-                }
-                
-            case .failure(let error):
-                completion(.failure(error))
-            }
-        }
+        performRequest(url: url, completion: completion)
     }
     
-    private func searchInOtherFields(page: Int, pageSize: Int, searchText: String, completion: @escaping (Result<DigimonResponse, Error>) -> Void) {
+    private func searchDigimons(searchText: String, page: Int, pageSize: Int, completion: @escaping (Result<DigimonResponse, Error>) -> Void) {
+        
         let encodedText = searchText.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let searchFields = ["type", "attribute", "level", "field"]
         
+        let searchURLs = [
+            "\(baseURL)/digimon?page=0&pageSize=50&name=\(encodedText)",
+            "\(baseURL)/digimon?page=0&pageSize=50&attribute=\(encodedText)",
+            "\(baseURL)/digimon?page=0&pageSize=50&level=\(encodedText)"
+        ]
+        
+        var allDigimons: [Digimon] = []
         let group = DispatchGroup()
-        var allResults: [Digimon] = []
-        var searchError: Error?
         
-        for field in searchFields {
+        for urlString in searchURLs {
+            guard let url = URL(string: urlString) else { continue }
+            
             group.enter()
             
-            let urlString = "\(baseURL)/digimon?page=\(page)&pageSize=\(pageSize)&\(field)=\(encodedText)"
-            guard let url = URL(string: urlString) else {
-                group.leave()
-                continue
-            }
-            
             performRequest(url: url) { (result: Result<DigimonResponse, Error>) in
-                defer { group.leave() }
-                
-                switch result {
-                case .success(let response):
-                    allResults.append(contentsOf: response.content)
-                case .failure(let error):
-                    searchError = error
+                if case .success(let response) = result {
+                    allDigimons.append(contentsOf: response.content)
                 }
+                group.leave()
             }
         }
         
         group.notify(queue: .main) {
-            if !allResults.isEmpty {
-                // Remove duplicates based on ID
-                let uniqueResults = Array(Set(allResults.map { $0.id }))
-                    .compactMap { id in allResults.first(where: { $0.id == id }) }
-                    .sorted { $0.id < $1.id }
-                
-                let response = DigimonResponse(
-                    content: Array(uniqueResults.prefix(pageSize)),
-                    pageable: nil
-                )
-                completion(.success(response))
-            } else if let error = searchError {
-                completion(.failure(error))
-            } else {
-                completion(.success(DigimonResponse(content: [], pageable: nil)))
+            // Hilangkan duplikat
+            let uniqueDigimons = self.removeDuplicates(from: allDigimons)
+            
+            // Buat response
+            let response = DigimonResponse(
+                content: uniqueDigimons,
+                pageable: nil
+            )
+            
+            completion(.success(response))
+        }
+    }
+    
+    private func removeDuplicates(from digimons: [Digimon]) -> [Digimon] {
+        var seen: Set<Int> = []
+        var unique: [Digimon] = []
+        
+        for digimon in digimons {
+            if !seen.contains(digimon.id) {
+                seen.insert(digimon.id)
+                unique.append(digimon)
             }
         }
+        
+        return unique.sorted { $0.name < $1.name }
     }
     
     func fetchDigimonDetail(id: Int, completion: @escaping (Result<DigimonDetail, Error>) -> Void) {
         let urlString = "\(baseURL)/digimon/\(id)"
+        
         guard let url = URL(string: urlString) else {
             completion(.failure(NSError(domain: "Invalid URL", code: -1)))
             return
@@ -113,6 +106,7 @@ class NetworkManager: NetworkManagerProtocol {
     
     private func performRequest<T: Codable>(url: URL, completion: @escaping (Result<T, Error>) -> Void) {
         URLSession.shared.dataTask(with: url) { data, response, error in
+            
             if let error = error {
                 let nsError = error as NSError
                 if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorNotConnectedToInternet {
@@ -145,6 +139,7 @@ class NetworkManager: NetworkManagerProtocol {
             } catch {
                 completion(.failure(NetworkError.decodingError(error)))
             }
+            
         }.resume()
     }
 }
