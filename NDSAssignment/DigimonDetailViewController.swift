@@ -100,11 +100,11 @@ class DigimonDetailViewController: UIViewController {
         }
         
         if let priorEvolutions = detail.priorEvolutions, !priorEvolutions.isEmpty {
-            addEvolutionSection(evolutions: priorEvolutions, title: "Prior Evolutions", emoji: "⬅️")
+            addEvolutionSection(evolutions: priorEvolutions, title: "Prior Evolutions")
         }
         
         if let nextEvolutions = detail.nextEvolutions, !nextEvolutions.isEmpty {
-            addEvolutionSection(evolutions: nextEvolutions, title: "Next Evolutions", emoji: "➡️")
+            addEvolutionSection(evolutions: nextEvolutions, title: "Next Evolutions")
         }
         
         if let fields = detail.fields, !fields.isEmpty {
@@ -186,10 +186,10 @@ class DigimonDetailViewController: UIViewController {
         infoStackView.addArrangedSubview(containerView)
     }
     
-    private func addEvolutionSection(evolutions: [Evolution], title: String, emoji: String) {
+    private func addEvolutionSection(evolutions: [Evolution], title: String) {
         let containerView = createCardContainer()
         
-        let titleLabel = createSectionTitle(text: "\(emoji) \(title)")
+        let titleLabel = createSectionTitle(text: "\(title)")
         containerView.addSubview(titleLabel)
         
         let scrollView = UIScrollView()

@@ -61,27 +61,24 @@ class DigimonListViewController: UIViewController {
     }
         
     private func loadDigimons(reset: Bool = false) {
-        guard !isLoading, hasMorePages else { return }
-            
-        if reset {
-            currentPage = 0
-            digimons.removeAll()
+        if !reset {
+            guard !isLoading, hasMorePages else { return }
+        } else {
+            if isLoading {
+                isLoading = false
+            }
             hasMorePages = true
-            collectionView.reloadData()
+            currentPage = 0
         }
-            
+                
         isLoading = true
-            
-        if digimons.isEmpty {
+                
+        if reset || digimons.isEmpty {
             loadingIndicator.startAnimating()
             emptyStateLabel.isHidden = true
         }
             
-        networkManager.fetchDigimons(
-            page: currentPage,
-            pageSize: pageSize,
-            searchText: currentSearchText
-        ) { [weak self] result in
+        networkManager.fetchDigimons(page: currentPage, pageSize: pageSize, searchText: currentSearchText) { [weak self] result in
             guard let self = self else { return }
                 
             DispatchQueue.main.async {
